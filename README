@@ -1,0 +1,24 @@
+"unjumble" is a
+uh
+
+example:
+
+    % sh -c 'echo this & echo is & echo a & echo test &' >$(unjumble 0>output)
+    % cat output
+    [2021-01-27 06:33:41] dash[68896]: this
+    [2021-01-27 06:33:41] dash[68899]: test
+    [2021-01-27 06:33:41] dash[68898]: a
+    [2021-01-27 06:33:41] dash[68897]: is
+
+it's for redirecting the output of multiple programs into a file **but with
+timestamps and process names included**
+
+unjumble works by secretly creating a FUSE filesystem and returning a path to a
+file inside it, so that it can receive `write()` calls to it directly and find
+out the process responsible for each one
+
+it then writes the line with added details to file descriptor 0 (the `0>output`
+redirection in the example is specifying the output file)
+
+the filesystem is automatically unmounted when the virtual file is no longer
+open in any process (in the example, when all the shell processes have exited)
