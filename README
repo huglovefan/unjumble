@@ -17,8 +17,37 @@ unjumble works by secretly creating a FUSE filesystem and returning a path to a
 file inside it, so that it can receive `write()` calls to it directly and find
 out the process responsible for each one
 
-it then writes the line with added details to file descriptor 0 (the `0>output`
-redirection in the example is specifying the output file)
+it then writes the output lines with added details to file descriptor 0
+(the `0>output` redirection in the example is specifying the output file)
 
 the filesystem is automatically unmounted when the virtual file is no longer
 open in any process (in the example, when all the shell processes have exited)
+
+actual real world example:
+
+    # .xinitrc or something
+    # redirect stderr to .xsession-errors through unjumble
+    exec >$(unjumble 0>>.xsession-errors) 2>&1
+    xthingd &
+    xsomeotherd &
+    exec epic-tiling-wm --disable-bloat
+
+with this, programs started in the X session will default to having their
+output messages written to the file with timestamps and correct process names(!!!)
+
+it will no longer be a total mystery what's filling up the log with nonsense or
+writing vaguely worrying error messages with no useful context
+
+fantasy world example:
+
+    #!/bin/sh
+    # non-broken parallel version of "command1 | xargs -n1 command2 | command3"
+    command1 | xargs -P4 -n1 command2 >$(unjumble --write-pipe-or-something)
+    unjumble --read-pipe | command3
+
+it's currently not properly supported but the same technology could be used to
+combine buffered output from multiple commands ran in parallel by xargs
+
+the output lines would be in random order like before, but unjumble could make
+sure they're complete and not corrupted by other lines being written by other
+processes at the same time
