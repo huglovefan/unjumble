@@ -46,6 +46,12 @@ static const char *cbasename(const char *path) {
 	return rv;
 }
 
+static void print_line_with_details(const char *date,
+                                    const char *exename,
+                                    pid_t pid,
+                                    const char *line,
+                                    size_t linelen);
+
 static int fs_write(const char *path,
                     const char *buf,
                     size_t size,
@@ -59,7 +65,7 @@ static int fs_write(const char *path,
 	const char *exename = "?";
 	time_t t;
 	struct tm *tmp;
-	const char *newline = "";
+	size_t insize = size;
 	(void)path;
 	(void)offset;
 	(void)fi;
@@ -75,14 +81,32 @@ static int fs_write(const char *path,
 	tmp = localtime(&t);
 	strftime(datebuf, sizeof(datebuf), "%Y-%m-%d %H:%M:%S", tmp);
 
-	if (size != 0 && buf[size-1] != '\n') {
-		newline = "\n";
+	while (size != 0) {
+		const char *eol = memchr(buf, '\n', size);
+		if (eol != NULL) {
+			size_t linelen = (size_t)(eol-buf);
+			print_line_with_details(datebuf, exename, ctx->pid, buf, linelen);
+			buf += linelen+1;
+			size -= linelen+1;
+		} else {
+			/* idiot forgot to write the newline */
+			size_t linelen = size;
+			print_line_with_details(datebuf, exename, ctx->pid, buf, linelen);
+			buf += linelen;
+			size -= linelen;
+		}
 	}
 
-	fprintf(outfile, "[%s] %s[%u]: %.*s%s",
-	    datebuf, exename, ctx->pid, (int)size, buf, newline);
+	return (int)insize;
+}
 
-	return (int)size;
+static void print_line_with_details(const char *date,
+                                    const char *exename,
+                                    pid_t pid,
+                                    const char *line,
+                                    size_t linelen) {
+	fprintf(outfile, "[%s] %s[%u]: %.*s\n",
+	    date, exename, pid, (int)linelen, line);
 }
 
 static struct fuse *g_fuse;
