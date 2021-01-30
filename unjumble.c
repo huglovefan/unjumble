@@ -52,6 +52,8 @@ static void print_line_with_details(const char *date,
                                     const char *line,
                                     size_t linelen);
 
+#define DELETED_SUF " (deleted)"
+
 static int fs_write(const char *path,
                     const char *buf,
                     size_t size,
@@ -74,6 +76,10 @@ static int fs_write(const char *path,
 	read = readlink(proc_exe, exebuf, sizeof(exebuf));
 	if (read >= 0 && (size_t)read < sizeof(exebuf)) {
 		exebuf[read] = '\0';
+		if ((size_t)read >= strlen(DELETED_SUF) &&
+		    0 == memcmp(exebuf+read-strlen(DELETED_SUF), DELETED_SUF, sizeof(DELETED_SUF))) {
+			exebuf[(size_t)read-strlen(DELETED_SUF)] = '\0';
+		}
 		exename = cbasename(exebuf);
 	}
 
